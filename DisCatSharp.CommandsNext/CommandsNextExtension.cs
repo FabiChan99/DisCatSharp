@@ -35,6 +35,8 @@ using DisCatSharp.CommandsNext.Exceptions;
 using DisCatSharp.Common.Utilities;
 using DisCatSharp.Entities;
 using DisCatSharp.EventArgs;
+using DisCatSharp.HybridCommands.Entities;
+using DisCatSharp.HybridCommands.Enums;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -49,7 +51,7 @@ public class CommandsNextExtension : BaseExtension
 	/// <summary>
 	/// Gets the config.
 	/// </summary>
-	private readonly CommandsNextConfiguration _config;
+	internal readonly CommandsNextConfiguration _config;
 
 	/// <summary>
 	/// Gets the help formatter.
@@ -258,14 +260,27 @@ public class CommandsNextExtension : BaseExtension
 		var fname = cnt.ExtractNextArgument(ref __);
 
 		var cmd = this.FindCommand(cnt, out var args);
-		var ctx = this.CreateContext(e.Message, pfx, cmd, args);
-		if (cmd == null)
+		if (cmd?.IsHybrid ?? false)
 		{
-			await this._error.InvokeAsync(this, new CommandErrorEventArgs(this.Client.ServiceProvider) { Context = ctx, Exception = new CommandNotFoundException(fname) }).ConfigureAwait(false);
-			return;
-		}
+			var ctx = this.CreateHybridContext(e.Message, pfx, cmd);
+			if (cmd == null)
+			{
+				return;
+			}
 
-		_ = Task.Run(async () => await this.ExecuteCommandAsync(ctx).ConfigureAwait(false));
+			_ = Task.Run(async () => await this.ExecuteCommandAsync(ctx, cmd, args).ConfigureAwait(false));
+		}
+		else
+		{
+			var ctx = this.CreateCnextContext(e.Message, pfx, cmd, args);
+			if (cmd == null)
+			{
+				await this._error.InvokeAsync(this, new CommandErrorEventArgs(this.Client.ServiceProvider) { Context = ctx, Exception = new CommandNotFoundException(fname) }).ConfigureAwait(false);
+				return;
+			}
+
+			_ = Task.Run(async () => await this.ExecuteCommandAsync(ctx).ConfigureAwait(false));
+		}
 	}
 
 	/// <summary>
@@ -341,7 +356,7 @@ public class CommandsNextExtension : BaseExtension
 	/// <param name="cmd">Command to execute.</param>
 	/// <param name="rawArguments">Raw arguments to pass to command.</param>
 	/// <returns>Created command execution context.</returns>
-	public CommandContext CreateContext(DiscordMessage msg, string prefix, Command cmd, string rawArguments = null)
+	public CommandContext CreateCnextContext(DiscordMessage msg, string prefix, Command cmd, string rawArguments = null)
 	{
 		var ctx = new CommandContext
 		{
@@ -366,6 +381,35 @@ public class CommandsNextExtension : BaseExtension
 	}
 
 	/// <summary>
+	/// Creates a command execution context from specified arguments.
+	/// </summary>
+	/// <param name="msg">Message to use for context.</param>
+	/// <param name="prefix">Command prefix, used to execute commands.</param>
+	/// <param name="cmd">Command to execute.</param>
+	/// <param name="rawArguments">Raw arguments to pass to command.</param>
+	/// <returns>Created command execution context.</returns>
+	public HybridCommandContext CreateHybridContext(DiscordMessage msg, string prefix, Command cmd)
+	{
+		var ctx = new HybridCommandContext
+		{
+			CommandType = HybridCommandType.Prefix,
+			Client = this.Client,
+			CommandName = cmd.Name,
+			Message = msg,
+			Prefix = prefix,
+			Services = this.Services
+		};
+
+		if (cmd != null && (cmd.Module is TransientCommandModule || cmd.Module == null))
+		{
+			var scope = ctx.Services.CreateScope();
+			ctx.Services = scope.ServiceProvider;
+		}
+
+		return ctx;
+	}
+
+	/// <summary>
 	/// Executes specified command from given context.
 	/// </summary>
 	/// <param name="ctx">Context to execute command from.</param>
@@ -380,9 +424,9 @@ public class CommandsNextExtension : BaseExtension
 			var res = await cmd.ExecuteAsync(ctx).ConfigureAwait(false);
 
 			if (res.IsSuccessful)
-				await this._executed.InvokeAsync(this, new CommandExecutionEventArgs(this.Client.ServiceProvider) { Context = res.Context }).ConfigureAwait(false);
+				await this._executed.InvokeAsync(this, new CommandExecutionEventArgs(this.Client.ServiceProvider) { Context = res.CommandContext }).ConfigureAwait(false);
 			else
-				await this._error.InvokeAsync(this, new CommandErrorEventArgs(this.Client.ServiceProvider) { Context = res.Context, Exception = res.Exception }).ConfigureAwait(false);
+				await this._error.InvokeAsync(this, new CommandErrorEventArgs(this.Client.ServiceProvider) { Context = res.CommandContext, Exception = res.Exception }).ConfigureAwait(false);
 		}
 		catch (Exception ex)
 		{
@@ -396,12 +440,54 @@ public class CommandsNextExtension : BaseExtension
 	}
 
 	/// <summary>
+	/// Executes specified command from given context.
+	/// </summary>
+	/// <param name="ctx">Context to execute command from.</param>
+	/// <returns></returns>
+	public async Task ExecuteCommandAsync(HybridCommandContext ctx, Command cmd, string rawArgs)
+	{
+		try
+		{
+			await this.RunAllChecksAsync(cmd, ctx).ConfigureAwait(false);
+
+			var res = await cmd.ExecuteAsync(ctx, cmd, rawArgs).ConfigureAwait(false);
+
+			// todo: handle commands stuff
+
+			//if (res.IsSuccessful)
+			//	await this._executed.InvokeAsync(this, new CommandExecutionEventArgs(this.Client.ServiceProvider) { Context = res.HybridContext }).ConfigureAwait(false);
+			//else
+			//	await this._error.InvokeAsync(this, new CommandErrorEventArgs(this.Client.ServiceProvider) { Context = res.HybridContext, Exception = res.Exception }).ConfigureAwait(false);
+		}
+		catch (Exception)
+		{
+			// todo: handle exceptions
+		}
+	}
+
+	/// <summary>
 	/// Runs the all checks async.
 	/// </summary>
 	/// <param name="cmd">The cmd.</param>
 	/// <param name="ctx">The ctx.</param>
 	/// <returns>A Task.</returns>
 	private async Task RunAllChecksAsync(Command cmd, CommandContext ctx)
+	{
+		if (cmd.Parent != null)
+			await this.RunAllChecksAsync(cmd.Parent, ctx).ConfigureAwait(false);
+
+		var fchecks = await cmd.RunChecksAsync(ctx, false).ConfigureAwait(false);
+		if (fchecks.Any())
+			throw new ChecksFailedException(cmd, ctx, fchecks);
+	}
+
+	/// <summary>
+	/// Runs the all checks async.
+	/// </summary>
+	/// <param name="cmd">The cmd.</param>
+	/// <param name="ctx">The ctx.</param>
+	/// <returns>A Task.</returns>
+	private async Task RunAllChecksAsync(Command cmd, HybridCommandContext ctx)
 	{
 		if (cmd.Parent != null)
 			await this.RunAllChecksAsync(cmd.Parent, ctx).ConfigureAwait(false);
@@ -527,7 +613,7 @@ public class CommandsNextExtension : BaseExtension
 						foreach (var chk in inheritedChecks)
 							groupBuilder.WithExecutionCheck(chk);
 
-					foreach (var mi in ti.DeclaredMethods.Where(x => x.IsCommandCandidate(out _) && x.GetCustomAttribute<GroupCommandAttribute>() != null))
+					foreach (var mi in ti.DeclaredMethods.Where(x => x.IsCommandCandidate(out _, out _) && x.GetCustomAttribute<GroupCommandAttribute>() != null))
 						groupBuilder.WithOverload(new CommandOverloadBuilder(mi));
 					break;
 
@@ -569,7 +655,7 @@ public class CommandsNextExtension : BaseExtension
 		var commandBuilders = new Dictionary<string, CommandBuilder>();
 		foreach (var m in methods)
 		{
-			if (!m.IsCommandCandidate(out _))
+			if (!m.IsCommandCandidate(out _, out var isHybrid))
 				continue;
 
 			var attrs = m.GetCustomAttributes();
@@ -589,7 +675,7 @@ public class CommandsNextExtension : BaseExtension
 
 			if (!commandBuilders.TryGetValue(commandName, out var commandBuilder))
 			{
-				commandBuilders.Add(commandName, commandBuilder = new CommandBuilder(module).WithName(commandName));
+				commandBuilders.Add(commandName, commandBuilder = new CommandBuilder(module).WithName(commandName).AsHybrid(isHybrid));
 
 				if (!isModule)
 					if (currentParent != null)
@@ -600,6 +686,7 @@ public class CommandsNextExtension : BaseExtension
 					groupBuilder.WithChild(commandBuilder);
 			}
 
+			commandBuilder.IsHybrid = isHybrid;
 			commandBuilder.WithOverload(new CommandOverloadBuilder(m));
 
 			if (!isModule && moduleChecks.Any())
@@ -916,11 +1003,51 @@ public class CommandsNextExtension : BaseExtension
 	/// <summary>
 	/// Converts a string to specified type.
 	/// </summary>
+	/// <typeparam name="T">Type to convert to.</typeparam>
+	/// <param name="value">Value to convert.</param>
+	/// <param name="ctx">Context in which to convert to.</param>
+	/// <returns>Converted object.</returns>
+	public async Task<T> ConvertArgument<T>(string value, HybridCommandContext ctx)
+	{
+		var t = typeof(T);
+		if (!this.ArgumentConverters.ContainsKey(t))
+			throw new ArgumentException("There is no converter specified for given type.", nameof(T));
+
+		if (this.ArgumentConverters[t] is not IArgumentConverter<T> cv)
+			throw new ArgumentException("Invalid converter registered for this type.", nameof(T));
+
+		var cvr = await cv.ConvertAsync(value, ctx).ConfigureAwait(false);
+		return !cvr.HasValue ? throw new ArgumentException("Could not convert specified value to given type.", nameof(value)) : cvr.Value;
+	}
+
+	/// <summary>
+	/// Converts a string to specified type.
+	/// </summary>
 	/// <param name="value">Value to convert.</param>
 	/// <param name="ctx">Context in which to convert to.</param>
 	/// <param name="type">Type to convert to.</param>
 	/// <returns>Converted object.</returns>
 	public async Task<object> ConvertArgument(string value, CommandContext ctx, Type type)
+	{
+		var m = this._convertGeneric.MakeGenericMethod(type);
+		try
+		{
+			return await (m.Invoke(this, new object[] { value, ctx }) as Task<object>).ConfigureAwait(false);
+		}
+		catch (TargetInvocationException ex)
+		{
+			throw ex.InnerException;
+		}
+	}
+
+	/// <summary>
+	/// Converts a string to specified type.
+	/// </summary>
+	/// <param name="value">Value to convert.</param>
+	/// <param name="ctx">Context in which to convert to.</param>
+	/// <param name="type">Type to convert to.</param>
+	/// <returns>Converted object.</returns>
+	public async Task<object> ConvertArgument(string value, HybridCommandContext ctx, Type type)
 	{
 		var m = this._convertGeneric.MakeGenericMethod(type);
 		try

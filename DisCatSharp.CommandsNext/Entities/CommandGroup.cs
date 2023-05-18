@@ -85,7 +85,7 @@ public class CommandGroup : Command
 					{
 						IsSuccessful = false,
 						Exception = new ChecksFailedException(cmd, xctx, fchecks),
-						Context = xctx
+						CommandContext = xctx
 					}
 					: await cmd.ExecuteAsync(xctx).ConfigureAwait(false);
 			}
@@ -96,7 +96,7 @@ public class CommandGroup : Command
 			{
 				IsSuccessful = false,
 				Exception = new InvalidOperationException("No matching subcommands were found, and this group is not executable."),
-				Context = ctx
+				CommandContext = ctx
 			}
 			: await base.ExecuteAsync(ctx).ConfigureAwait(false);
 	}

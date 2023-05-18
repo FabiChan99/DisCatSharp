@@ -23,6 +23,7 @@
 using System.Threading.Tasks;
 
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Converters;
 
@@ -31,6 +32,23 @@ namespace DisCatSharp.CommandsNext.Converters;
 /// </summary>
 public class NullableConverter<T> : IArgumentConverter<T?> where T : struct
 {
+	public async Task<Optional<T?>> ConvertAsync(string value, HybridCommandContext ctx)
+	{
+		value = value.ToLowerInvariant();
+
+		if (value == "null")
+			return null;
+
+		if (ctx.Client.GetCommandsNext().ArgumentConverters.TryGetValue(typeof(T), out var cv))
+		{
+			var cvx = cv as IArgumentConverter<T>;
+			var val = await cvx.ConvertAsync(value, ctx).ConfigureAwait(false);
+			return val.Map<T?>(x => x);
+		}
+
+		return Optional.None;
+	}
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>

@@ -116,6 +116,8 @@ public sealed class CommandContext
 	/// </summary>
 	internal ServiceContext ServiceScopeContext { get; set; }
 
+	internal bool IsHybrid { get; set; }
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="CommandContext"/> class.
 	/// </summary>

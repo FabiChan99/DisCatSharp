@@ -33,6 +33,7 @@ using DisCatSharp.CommandsNext.Attributes;
 using DisCatSharp.CommandsNext.Converters;
 using DisCatSharp.Common.RegularExpressions;
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -304,6 +305,104 @@ public static class CommandsNextUtilities
 	}
 
 	/// <summary>
+	/// Binds the arguments.
+	/// </summary>
+	/// <param name="ctx">The command context.</param>
+	/// <param name="ignoreSurplus">If true, ignore further text in string.</param>
+	internal static async Task<ArgumentBindingResult> BindArguments(HybridCommandContext ctx, Command command, CommandOverload overload, string rawString, bool ignoreSurplus)
+	{
+		var args = new object[overload.Arguments.Count + 2];
+		args[1] = ctx;
+		var rawArgumentList = new List<string>(overload.Arguments.Count);
+
+		var argString = rawString;
+		var foundAt = 0;
+		foreach (var arg in overload.Arguments)
+		{
+			string argValue;
+			if (arg.IsCatchAll)
+			{
+				if (arg.IsArray)
+				{
+					while (true)
+					{
+						argValue = ExtractNextArgument(argString, ref foundAt);
+						if (argValue == null)
+							break;
+
+						rawArgumentList.Add(argValue);
+					}
+
+					break;
+				}
+				else
+				{
+					if (argString == null)
+						break;
+
+					argValue = argString[foundAt..].Trim();
+					argValue = argValue == "" ? null : argValue;
+					foundAt = argString.Length;
+
+					rawArgumentList.Add(argValue);
+					break;
+				}
+			}
+			else
+			{
+				argValue = ExtractNextArgument(argString, ref foundAt);
+				rawArgumentList.Add(argValue);
+			}
+
+			if (argValue == null && !arg.IsOptional && !arg.IsCatchAll)
+				return new ArgumentBindingResult(new ArgumentException("Not enough arguments supplied to the command."));
+			else if (argValue == null)
+				rawArgumentList.Add(null);
+		}
+
+		if (!ignoreSurplus && foundAt < argString.Length)
+			return new ArgumentBindingResult(new ArgumentException("Too many arguments were supplied to this command."));
+
+		for (var i = 0; i < overload.Arguments.Count; i++)
+		{
+			var arg = overload.Arguments[i];
+			if (arg.IsCatchAll && arg.IsArray)
+			{
+				var array = Array.CreateInstance(arg.Type, rawArgumentList.Count - i);
+				var start = i;
+				while (i < rawArgumentList.Count)
+				{
+					try
+					{
+						array.SetValue(await ctx.Client.GetCommandsNext().ConvertArgument(rawArgumentList[i], ctx, arg.Type).ConfigureAwait(false), i - start);
+					}
+					catch (Exception ex)
+					{
+						return new ArgumentBindingResult(ex);
+					}
+					i++;
+				}
+
+				args[start + 2] = array;
+				break;
+			}
+			else
+			{
+				try
+				{
+					args[i + 2] = rawArgumentList[i] != null ? await ctx.Client.GetCommandsNext().ConvertArgument(rawArgumentList[i], ctx, arg.Type).ConfigureAwait(false) : arg.DefaultValue;
+				}
+				catch (Exception ex)
+				{
+					return new ArgumentBindingResult(ex);
+				}
+			}
+		}
+
+		return new ArgumentBindingResult(args, rawArgumentList);
+	}
+
+	/// <summary>
 	/// Whether this module is a candidate type.
 	/// </summary>
 	/// <param name="type">The type.</param>
@@ -340,7 +439,7 @@ public static class CommandsNextUtilities
 			return false;
 
 		// qualifies if any method or type qualifies
-		return ti.DeclaredMethods.Any(xmi => xmi.IsCommandCandidate(out _)) || ti.DeclaredNestedTypes.Any(xti => xti.IsModuleCandidateType());
+		return ti.DeclaredMethods.Any(xmi => xmi.IsCommandCandidate(out _, out _)) || ti.DeclaredNestedTypes.Any(xti => xti.IsModuleCandidateType());
 	}
 
 	/// <summary>
@@ -348,9 +447,10 @@ public static class CommandsNextUtilities
 	/// </summary>
 	/// <param name="method">The method.</param>
 	/// <param name="parameters">The parameters.</param>
-	internal static bool IsCommandCandidate(this MethodInfo method, out ParameterInfo[] parameters)
+	internal static bool IsCommandCandidate(this MethodInfo method, out ParameterInfo[] parameters, out bool IsHybrid)
 	{
 		parameters = null;
+		IsHybrid = false;
 		// check if exists
 		if (method == null)
 			return false;
@@ -361,8 +461,11 @@ public static class CommandsNextUtilities
 
 		// check if appropriate return and arguments
 		parameters = method.GetParameters();
-		if (!parameters.Any() || parameters.First().ParameterType != typeof(CommandContext) || method.ReturnType != typeof(Task))
+		if (!parameters.Any() || (parameters.First().ParameterType != typeof(CommandContext) && parameters.First().ParameterType != typeof(HybridCommandContext)) || method.ReturnType != typeof(Task))
 			return false;
+
+		if (parameters.First().ParameterType == typeof(HybridCommandContext))
+			IsHybrid = true;
 
 		// qualifies
 		return true;

@@ -24,6 +24,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -38,6 +40,14 @@ public sealed class RequireOwnerAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+	{
+		var app = ctx.Client.CurrentApplication;
+		var me = ctx.Client.CurrentUser;
+
+		return app != null ? Task.FromResult(app.Owners.Any(x => x.Id == ctx.User.Id)) : Task.FromResult(ctx.User.Id == me.Id);
+	}
+
+	public override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 	{
 		var app = ctx.Client.CurrentApplication;
 		var me = ctx.Client.CurrentUser;

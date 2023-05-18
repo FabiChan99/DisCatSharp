@@ -24,6 +24,7 @@ using System;
 using System.Threading.Tasks;
 
 using DisCatSharp.Enums;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Attributes;
 
@@ -60,6 +61,39 @@ public sealed class RequirePermissionsAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override async Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+	{
+		if (ctx.Guild == null)
+			return this.IgnoreDms;
+
+		var channel = ctx.Channel;
+		if (ctx.Channel.GuildId == null)
+		{
+			channel = await ctx.Client.GetChannelAsync(ctx.Channel.Id, true);
+		}
+
+		var usr = ctx.Member;
+		if (usr == null)
+			return false;
+		var pusr = channel.PermissionsFor(usr);
+
+		var bot = await ctx.Guild.GetMemberAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
+		if (bot == null)
+			return false;
+		var pbot = channel.PermissionsFor(bot);
+
+		var usrok = ctx.Guild.OwnerId == usr.Id;
+		var botok = ctx.Guild.OwnerId == bot.Id;
+
+		if (!usrok)
+			usrok = (pusr & Permissions.Administrator) != 0 || (pusr & this.Permissions) == this.Permissions;
+
+		if (!botok)
+			botok = (pbot & Permissions.Administrator) != 0 || (pbot & this.Permissions) == this.Permissions;
+
+		return usrok && botok;
+	}
+
+	public override async Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 	{
 		if (ctx.Guild == null)
 			return this.IgnoreDms;

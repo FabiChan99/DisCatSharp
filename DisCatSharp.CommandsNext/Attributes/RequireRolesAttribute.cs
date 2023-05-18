@@ -26,6 +26,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -68,6 +70,25 @@ public sealed class RequireRolesAttribute : CheckBaseAttribute
 		var rns = ctx.Member.Roles.Select(xr => xr.Name);
 		var rnc = rns.Count();
 		var ins = rns.Intersect(this.RoleNames, ctx.CommandsNext.GetStringComparer());
+		var inc = ins.Count();
+
+		return this.CheckMode switch
+		{
+			RoleCheckMode.All => Task.FromResult(this.RoleNames.Count == inc),
+			RoleCheckMode.SpecifiedOnly => Task.FromResult(rnc == inc),
+			RoleCheckMode.None => Task.FromResult(inc == 0),
+			_ => Task.FromResult(inc > 0),
+		};
+	}
+
+	public override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
+	{
+		if (ctx.Guild == null || ctx.Member == null)
+			return Task.FromResult(false);
+
+		var rns = ctx.Member.Roles.Select(xr => xr.Name);
+		var rnc = rns.Count();
+		var ins = rns.Intersect(this.RoleNames, ctx.Client.GetCommandsNext().GetStringComparer());
 		var inc = ins.Count();
 
 		return this.CheckMode switch

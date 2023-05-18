@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 
 using DisCatSharp.Common.RegularExpressions;
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Converters;
 
@@ -35,6 +36,11 @@ namespace DisCatSharp.CommandsNext.Converters;
 /// </summary>
 public class DateTimeConverter : IArgumentConverter<DateTime>
 {
+	public Task<Optional<DateTime>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<DateTime>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -51,6 +57,11 @@ public class DateTimeConverter : IArgumentConverter<DateTime>
 /// </summary>
 public class DateTimeOffsetConverter : IArgumentConverter<DateTimeOffset>
 {
+	public Task<Optional<DateTimeOffset>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<DateTimeOffset>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -94,6 +105,60 @@ public class TimeSpanConverter : IArgumentConverter<TimeSpan>
 			return Task.FromResult(Optional<TimeSpan>.None);
 
 		if (!ctx.Config.CaseSensitive)
+			value = value.ToLowerInvariant();
+
+		if (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var result))
+			return Task.FromResult(Optional.Some(result));
+
+		var gps = new string[] { "days", "hours", "minutes", "seconds" };
+		var mtc = s_timeSpanRegex.Match(value);
+		if (!mtc.Success)
+			return Task.FromResult(Optional<TimeSpan>.None);
+
+		var d = 0;
+		var h = 0;
+		var m = 0;
+		var s = 0;
+		foreach (var gp in gps)
+		{
+			var gpc = mtc.Groups[gp].Value;
+			if (string.IsNullOrWhiteSpace(gpc))
+				continue;
+
+			var gpt = gpc[^1];
+			int.TryParse(gpc[0..^1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var val);
+			switch (gpt)
+			{
+				case 'd':
+					d = val;
+					break;
+
+				case 'h':
+					h = val;
+					break;
+
+				case 'm':
+					m = val;
+					break;
+
+				case 's':
+					s = val;
+					break;
+			}
+		}
+		result = new TimeSpan(d, h, m, s);
+		return Task.FromResult(Optional.Some(result));
+	}
+
+	public Task<Optional<TimeSpan>> ConvertAsync(string value, HybridCommandContext ctx)
+	{
+		if (value == "0")
+			return Task.FromResult(Optional.Some(TimeSpan.Zero));
+
+		if (int.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
+			return Task.FromResult(Optional<TimeSpan>.None);
+
+		if (!ctx.Client.GetCommandsNext()._config.CaseSensitive)
 			value = value.ToLowerInvariant();
 
 		if (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var result))

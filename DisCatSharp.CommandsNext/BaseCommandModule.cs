@@ -22,6 +22,8 @@
 
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext;
 
 /// <summary>
@@ -43,5 +45,21 @@ public abstract class BaseCommandModule
 	/// <param name="ctx">Context in which the method is being executed.</param>
 	/// <returns></returns>
 	public virtual Task AfterExecutionAsync(CommandContext ctx)
+		=> Task.Delay(0);
+
+	/// <summary>
+	/// Called before a command in the implementing module is executed.
+	/// </summary>
+	/// <param name="ctx">Context in which the method is being executed.</param>
+	/// <returns></returns>
+	public virtual Task BeforeExecutionAsync(HybridCommandContext ctx)
+		=> Task.Delay(0);
+
+	/// <summary>
+	/// Called after a command in the implementing module is successfully executed.
+	/// </summary>
+	/// <param name="ctx">Context in which the method is being executed.</param>
+	/// <returns></returns>
+	public virtual Task AfterExecutionAsync(HybridCommandContext ctx)
 		=> Task.Delay(0);
 }

@@ -30,6 +30,7 @@ using System.Text;
 
 using DisCatSharp.CommandsNext.Attributes;
 using DisCatSharp.CommandsNext.Exceptions;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Builders;
 
@@ -86,7 +87,7 @@ public sealed class CommandOverloadBuilder
 	/// <param name="target">The target.</param>
 	private CommandOverloadBuilder(MethodInfo method, object target)
 	{
-		if (!method.IsCommandCandidate(out var prms))
+		if (!method.IsCommandCandidate(out var prms, out var isHybrid))
 			throw new ArgumentException("Specified method is not suitable for a command.", nameof(method));
 
 		this._invocationTarget = target;
@@ -95,7 +96,11 @@ public sealed class CommandOverloadBuilder
 		var ea = new ParameterExpression[prms.Length + 1];
 		var iep = Expression.Parameter(target?.GetType() ?? method.DeclaringType, "instance");
 		ea[0] = iep;
-		ea[1] = Expression.Parameter(typeof(CommandContext), "ctx");
+
+		if (isHybrid)
+			ea[1] = Expression.Parameter(typeof(HybridCommandContext), "ctx");
+		else
+			ea[1] = Expression.Parameter(typeof(CommandContext), "ctx");
 
 		var pri = method.GetCustomAttribute<PriorityAttribute>();
 		if (pri != null)

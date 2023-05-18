@@ -23,6 +23,8 @@
 using System;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -68,6 +70,20 @@ public sealed class RequireBoostingAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override async Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+	{
+		if (this.GuildId != 0)
+		{
+			var guild = await ctx.Client.GetGuildAsync(this.GuildId);
+			var member = await guild.GetMemberAsync(ctx.User.Id);
+			return member != null && member.PremiumSince.HasValue ? await Task.FromResult(member.PremiumSince.Value.UtcDateTime.Date < DateTime.UtcNow.Date.AddDays(-this.Since)) : await Task.FromResult(false);
+		}
+		else
+		{
+			return ctx.Member != null && ctx.Member.PremiumSince.HasValue ? await Task.FromResult(ctx.Member.PremiumSince.Value.UtcDateTime.Date < DateTime.UtcNow.Date.AddDays(-this.Since)) : await Task.FromResult(false);
+		}
+	}
+
+	public override async Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 	{
 		if (this.GuildId != 0)
 		{

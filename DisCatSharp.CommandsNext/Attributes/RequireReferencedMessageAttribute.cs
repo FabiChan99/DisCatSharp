@@ -22,6 +22,8 @@
 
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -36,5 +38,7 @@ public sealed class RequireReferencedMessageAttribute : CheckBaseAttribute
 	{ }
 
 	public override Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+		=> Task.FromResult(help || ctx.Message.ReferencedMessage != null);
+	public override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 		=> Task.FromResult(help || ctx.Message.ReferencedMessage != null);
 }

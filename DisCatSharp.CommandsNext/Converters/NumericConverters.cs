@@ -24,6 +24,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Converters;
 
@@ -32,6 +33,11 @@ namespace DisCatSharp.CommandsNext.Converters;
 /// </summary>
 public class BoolConverter : IArgumentConverter<bool>
 {
+	public Task<Optional<bool>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		bool.TryParse(value, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<bool>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -48,6 +54,11 @@ public class BoolConverter : IArgumentConverter<bool>
 /// </summary>
 public class Int8Converter : IArgumentConverter<sbyte>
 {
+	public Task<Optional<sbyte>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		sbyte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<sbyte>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -64,6 +75,11 @@ public class Int8Converter : IArgumentConverter<sbyte>
 /// </summary>
 public class Uint8Converter : IArgumentConverter<byte>
 {
+	public Task<Optional<byte>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<byte>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -80,6 +96,11 @@ public class Uint8Converter : IArgumentConverter<byte>
 /// </summary>
 public class Int16Converter : IArgumentConverter<short>
 {
+	public Task<Optional<short>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		short.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<short>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -96,6 +117,11 @@ public class Int16Converter : IArgumentConverter<short>
 /// </summary>
 public class Uint16Converter : IArgumentConverter<ushort>
 {
+	public Task<Optional<ushort>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<ushort>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -112,6 +138,11 @@ public class Uint16Converter : IArgumentConverter<ushort>
 /// </summary>
 public class Int32Converter : IArgumentConverter<int>
 {
+	public Task<Optional<int>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<int>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -128,6 +159,11 @@ public class Int32Converter : IArgumentConverter<int>
 /// </summary>
 public class Uint32Converter : IArgumentConverter<uint>
 {
+	public Task<Optional<uint>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<uint>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -144,6 +180,11 @@ public class Uint32Converter : IArgumentConverter<uint>
 /// </summary>
 public class Int64Converter : IArgumentConverter<long>
 {
+	public Task<Optional<long>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<long>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -160,6 +201,11 @@ public class Int64Converter : IArgumentConverter<long>
 /// </summary>
 public class Uint64Converter : IArgumentConverter<ulong>
 {
+	public Task<Optional<ulong>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		ulong.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<ulong>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -176,6 +222,11 @@ public class Uint64Converter : IArgumentConverter<ulong>
 /// </summary>
 public class Float32Converter : IArgumentConverter<float>
 {
+	public Task<Optional<float>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		float.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<float>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -192,6 +243,11 @@ public class Float32Converter : IArgumentConverter<float>
 /// </summary>
 public class Float64Converter : IArgumentConverter<double>
 {
+	public Task<Optional<double>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		double.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<double>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -208,6 +264,11 @@ public class Float64Converter : IArgumentConverter<double>
 /// </summary>
 public class Float128Converter : IArgumentConverter<decimal>
 {
+	public Task<Optional<decimal>> ConvertAsync(string value, HybridCommandContext ctx) =>
+		decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var result)
+			? Task.FromResult(Optional.Some(result))
+			: Task.FromResult(Optional<decimal>.None);
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>

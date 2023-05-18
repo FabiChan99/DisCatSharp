@@ -24,6 +24,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -62,4 +64,6 @@ public sealed class RequirePrefixesAttribute : CheckBaseAttribute
 	/// <param name="help">If true, help - returns true.</param>
 	public override Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
 		=> Task.FromResult((help && this.ShowInHelp) || this.Prefixes.Contains(ctx.Prefix, ctx.CommandsNext.GetStringComparer()));
+	public override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
+		=> Task.FromResult((help && this.ShowInHelp) || this.Prefixes.Contains(ctx.Prefix, ctx.Client.GetCommandsNext().GetStringComparer()));
 }

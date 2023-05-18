@@ -23,6 +23,8 @@
 using System;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -37,6 +39,21 @@ public sealed class RequireGuildOwnerAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override async Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+	{
+		var guild = await Task.FromResult(ctx.Guild != null);
+		if (guild)
+		{
+			var owner = await Task.FromResult(ctx.Member == ctx.Guild.Owner);
+
+			return owner;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	public async override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 	{
 		var guild = await Task.FromResult(ctx.Guild != null);
 		if (guild)

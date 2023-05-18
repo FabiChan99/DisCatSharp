@@ -101,6 +101,8 @@ public class CommandBuilder
 	/// </summary>
 	private readonly List<Attribute> _customAttributeList;
 
+	internal bool IsHybrid { get; set; }
+
 	/// <summary>
 	/// Creates a new module-less command builder.
 	/// </summary>
@@ -128,6 +130,12 @@ public class CommandBuilder
 
 		this._customAttributeList = new List<Attribute>();
 		this.CustomAttributes = new ReadOnlyCollection<Attribute>(this._customAttributeList);
+	}
+
+	public CommandBuilder AsHybrid(bool a)
+	{
+		this.IsHybrid = a;
+		return this;
 	}
 
 	/// <summary>
@@ -297,7 +305,8 @@ public class CommandBuilder
 			Parent = parent,
 			Overloads = new ReadOnlyCollection<CommandOverload>(this.Overloads.Select(xo => xo.Build()).ToList()),
 			Module = this.Module,
-			CustomAttributes = this.CustomAttributes
+			CustomAttributes = this.CustomAttributes,
+			IsHybrid = this.IsHybrid,
 		};
 
 		return cmd;

@@ -23,6 +23,8 @@
 using System;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -37,5 +39,7 @@ public sealed class RequireNsfwAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+		=> Task.FromResult(ctx.Channel.Guild == null || ctx.Channel.IsNsfw);
+	public override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 		=> Task.FromResult(ctx.Channel.Guild == null || ctx.Channel.IsNsfw);
 }

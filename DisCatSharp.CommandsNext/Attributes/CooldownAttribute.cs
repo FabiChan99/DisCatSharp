@@ -26,6 +26,8 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext.Attributes;
 
 /// <summary>
@@ -120,6 +122,34 @@ public sealed class CooldownAttribute : CheckBaseAttribute
 	}
 
 	/// <summary>
+	/// Calculates bucket ID for given command context.
+	/// </summary>
+	/// <param name="ctx">Context for which to calculate bucket ID for.</param>
+	/// <param name="userId">ID of the user with which this bucket is associated.</param>
+	/// <param name="channelId">ID of the channel with which this bucket is associated.</param>
+	/// <param name="guildId">ID of the guild with which this bucket is associated.</param>
+	/// <returns>Calculated bucket ID.</returns>
+	private string GetBucketId(HybridCommandContext ctx, out ulong userId, out ulong channelId, out ulong guildId)
+	{
+		userId = 0ul;
+		if ((this.BucketType & CooldownBucketType.User) != 0)
+			userId = ctx.User.Id;
+
+		channelId = 0ul;
+		if ((this.BucketType & CooldownBucketType.Channel) != 0)
+			channelId = ctx.Channel.Id;
+		if ((this.BucketType & CooldownBucketType.Guild) != 0 && ctx.Guild == null)
+			channelId = ctx.Channel.Id;
+
+		guildId = 0ul;
+		if (ctx.Guild != null && (this.BucketType & CooldownBucketType.Guild) != 0)
+			guildId = ctx.Guild.Id;
+
+		var bid = CommandCooldownBucket.MakeId(userId, channelId, guildId);
+		return bid;
+	}
+
+	/// <summary>
 	/// Executes a check.
 	/// </summary>
 	/// <param name="ctx">The command context.</param>
@@ -138,6 +168,22 @@ public sealed class CooldownAttribute : CheckBaseAttribute
 
 		return await bucket.DecrementUseAsync().ConfigureAwait(false);
 	}
+
+	public override async Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
+	{
+		if (help)
+			return true;
+
+		var bid = this.GetBucketId(ctx, out var usr, out var chn, out var gld);
+		if (!this._buckets.TryGetValue(bid, out var bucket))
+		{
+			bucket = new CommandCooldownBucket(this.MaxUses, this.Reset, usr, chn, gld);
+			this._buckets.AddOrUpdate(bid, bucket, (k, v) => bucket);
+		}
+
+		return await bucket.DecrementUseAsync().ConfigureAwait(false);
+	}
+
 }
 
 /// <summary>

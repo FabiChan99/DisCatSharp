@@ -24,6 +24,7 @@ using System;
 using System.Threading.Tasks;
 
 using DisCatSharp.Enums;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Attributes;
 
@@ -60,6 +61,28 @@ public sealed class RequireBotPermissionsAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override async Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+	{
+		if (ctx.Guild == null)
+			return this.IgnoreDms;
+
+		var bot = await ctx.Guild.GetMemberAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
+		if (bot == null)
+			return false;
+
+		if (bot.Id == ctx.Guild.OwnerId)
+			return true;
+
+		var channel = ctx.Channel;
+		if (ctx.Channel.GuildId == null)
+		{
+			channel = await ctx.Client.GetChannelAsync(ctx.Channel.Id, true);
+		}
+		var pbot = channel.PermissionsFor(bot);
+
+		return (pbot & Permissions.Administrator) != 0 || (pbot & this.Permissions) == this.Permissions;
+	}
+
+	public override async Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 	{
 		if (ctx.Guild == null)
 			return this.IgnoreDms;

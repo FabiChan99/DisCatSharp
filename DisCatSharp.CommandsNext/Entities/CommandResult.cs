@@ -22,6 +22,8 @@
 
 using System;
 
+using DisCatSharp.HybridCommands.Entities;
+
 namespace DisCatSharp.CommandsNext;
 
 /// <summary>
@@ -42,5 +44,10 @@ public struct CommandResult
 	/// <summary>
 	/// Gets the context in which the command was executed.
 	/// </summary>
-	public CommandContext Context { get; internal set; }
+	public CommandContext CommandContext { get; internal set; }
+
+	/// <summary>
+	/// Gets the context in which the command was executed.
+	/// </summary>
+	public HybridCommandContext HybridContext { get; internal set; }
 }

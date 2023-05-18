@@ -23,6 +23,7 @@
 using System.Threading.Tasks;
 
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Converters;
 
@@ -45,4 +46,5 @@ public interface IArgumentConverter<T> : IArgumentConverter
 	/// <param name="ctx">Context in which the value will be converted.</param>
 	/// <returns>A structure containing information whether the value was converted, and, if so, the converted value.</returns>
 	Task<Optional<T>> ConvertAsync(string value, CommandContext ctx);
+	Task<Optional<T>> ConvertAsync(string value, HybridCommandContext ctx);
 }

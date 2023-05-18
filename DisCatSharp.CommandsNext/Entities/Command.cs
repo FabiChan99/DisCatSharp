@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 
 using DisCatSharp.CommandsNext.Attributes;
 using DisCatSharp.CommandsNext.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext;
 
@@ -86,6 +87,8 @@ public class Command
 	/// </summary>
 	public IReadOnlyList<Attribute> CustomAttributes { get; internal set; }
 
+	internal bool IsHybrid { get; set; }
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Command"/> class.
 	/// </summary>
@@ -123,7 +126,7 @@ public class Command
 				res = new CommandResult
 				{
 					IsSuccessful = true,
-					Context = ctx
+					CommandContext = ctx
 				};
 
 				if (mdl is BaseCommandModule bcmAfter)
@@ -140,7 +143,60 @@ public class Command
 			{
 				IsSuccessful = false,
 				Exception = ex,
-				Context = ctx
+				CommandContext = ctx
+			};
+		}
+
+		return res;
+	}
+
+	/// <summary>
+	/// Executes this command with specified context.
+	/// </summary>
+	/// <param name="ctx">Context to execute the command in.</param>
+	/// <returns>Command's execution results.</returns>
+	public virtual async Task<CommandResult> ExecuteAsync(HybridCommandContext ctx, Command cmd, string rawArgs)
+	{
+		CommandResult res = default;
+		try
+		{
+			var executed = false;
+			foreach (var ovl in this.Overloads.OrderByDescending(x => x.Priority))
+			{
+				var args = await CommandsNextUtilities.BindArguments(ctx, cmd, ovl, rawArgs, true).ConfigureAwait(false);
+
+				if (!args.IsSuccessful)
+					continue;
+
+				var mdl = ovl.InvocationTarget ?? this.Module?.GetInstance(ctx.Services);
+				if (mdl is BaseCommandModule bcmBefore)
+					await bcmBefore.BeforeExecutionAsync(ctx).ConfigureAwait(false);
+
+				args.Converted[0] = mdl;
+				var ret = (Task)ovl.Callable.DynamicInvoke(args.Converted);
+				await ret.ConfigureAwait(false);
+				executed = true;
+				res = new CommandResult
+				{
+					IsSuccessful = true,
+					HybridContext = ctx
+				};
+
+				if (mdl is BaseCommandModule bcmAfter)
+					await bcmAfter.AfterExecutionAsync(ctx).ConfigureAwait(false);
+				break;
+			}
+
+			if (!executed)
+				throw new ArgumentException("Could not find a suitable overload for the command.");
+		}
+		catch (Exception ex)
+		{
+			res = new CommandResult
+			{
+				IsSuccessful = false,
+				Exception = ex,
+				HybridContext = ctx
 			};
 		}
 
@@ -154,6 +210,23 @@ public class Command
 	/// <param name="help">Whether this check is being executed from help or not. This can be used to probe whether command can be run without setting off certain fail conditions (such as cooldowns).</param>
 	/// <returns>Pre-execution checks that fail for given context.</returns>
 	public async Task<IEnumerable<CheckBaseAttribute>> RunChecksAsync(CommandContext ctx, bool help)
+	{
+		var fchecks = new List<CheckBaseAttribute>();
+		if (this.ExecutionChecks != null && this.ExecutionChecks.Any())
+			foreach (var ec in this.ExecutionChecks)
+				if (!await ec.ExecuteCheckAsync(ctx, help).ConfigureAwait(false))
+					fchecks.Add(ec);
+
+		return fchecks;
+	}
+
+	/// <summary>
+	/// Runs pre-execution checks for this command and returns any that fail for given context.
+	/// </summary>
+	/// <param name="ctx">Context in which the command is executed.</param>
+	/// <param name="help">Whether this check is being executed from help or not. This can be used to probe whether command can be run without setting off certain fail conditions (such as cooldowns).</param>
+	/// <returns>Pre-execution checks that fail for given context.</returns>
+	public async Task<IEnumerable<CheckBaseAttribute>> RunChecksAsync(HybridCommandContext ctx, bool help)
 	{
 		var fchecks = new List<CheckBaseAttribute>();
 		if (this.ExecutionChecks != null && this.ExecutionChecks.Any())

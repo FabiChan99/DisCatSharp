@@ -24,6 +24,7 @@ using System;
 using System.Threading.Tasks;
 
 using DisCatSharp.Enums;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Attributes;
 
@@ -61,6 +62,26 @@ public sealed class RequireUserPermissionsAttribute : CheckBaseAttribute
 	/// <param name="ctx">The command context.</param>
 	/// <param name="help">If true, help - returns true.</param>
 	public override Task<bool> ExecuteCheckAsync(CommandContext ctx, bool help)
+	{
+		if (ctx.Guild == null)
+			return Task.FromResult(this.IgnoreDms);
+
+		var usr = ctx.Member;
+		if (usr == null)
+			return Task.FromResult(false);
+
+		if (usr.Id == ctx.Guild.OwnerId)
+			return Task.FromResult(true);
+
+		var pusr = ctx.Channel.PermissionsFor(usr);
+
+		if ((pusr & Permissions.Administrator) != 0)
+			return Task.FromResult(true);
+
+		return (pusr & this.Permissions) == this.Permissions ? Task.FromResult(true) : Task.FromResult(false);
+	}
+
+	public override Task<bool> ExecuteCheckAsync(HybridCommandContext ctx, bool help)
 	{
 		if (ctx.Guild == null)
 			return Task.FromResult(this.IgnoreDms);

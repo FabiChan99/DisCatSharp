@@ -24,6 +24,7 @@ using System;
 using System.Threading.Tasks;
 
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.CommandsNext.Converters;
 
@@ -32,6 +33,9 @@ namespace DisCatSharp.CommandsNext.Converters;
 /// </summary>
 public class StringConverter : IArgumentConverter<string>
 {
+	public Task<Optional<string>> ConvertAsync(string value, HybridCommandContext ctx)
+		=> Task.FromResult(Optional.Some(value));
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
@@ -46,6 +50,21 @@ public class StringConverter : IArgumentConverter<string>
 /// </summary>
 public class UriConverter : IArgumentConverter<Uri>
 {
+	public Task<Optional<Uri>> ConvertAsync(string value, HybridCommandContext ctx)
+	{
+		try
+		{
+			if (value.StartsWith("<") && value.EndsWith(">"))
+				value = value[1..^1];
+
+			return Task.FromResult(Optional.Some(new Uri(value)));
+		}
+		catch
+		{
+			return Task.FromResult(Optional<Uri>.None);
+		}
+	}
+
 	/// <summary>
 	/// Converts a string.
 	/// </summary>
