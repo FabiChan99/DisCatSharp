@@ -42,6 +42,7 @@ using DisCatSharp.Enums;
 using DisCatSharp.EventArgs;
 using DisCatSharp.Exceptions;
 using DisCatSharp.HybridCommands.Entities;
+using DisCatSharp.HybridCommands.Enums;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -974,6 +975,7 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 
 				var hybridContext = new HybridCommandContext
 				{
+					CommandType = HybridCommandType.Slash,
 					Interaction = e.Interaction,
 					Channel = e.Interaction.Channel,
 					Guild = e.Interaction.Guild,
@@ -1020,7 +1022,7 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
 							var args = await this.ResolveInteractionCommandParameters(e, hybridContext, method, e.Interaction.Data.Options);
 
-							await this.RunCommandAsync(interactionContext, method, args);
+							await this.RunCommandAsync(hybridContext, method, args);
 						}
 						else
 						{
@@ -1067,7 +1069,7 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
 							var args = await this.ResolveInteractionCommandParameters(e, hybridContext, method, e.Interaction.Data.Options[0].Options[0].Options);
 
-							await this.RunCommandAsync(interactionContext, method, args);
+							await this.RunCommandAsync(hybridContext, method, args);
 						}
 						else
 						{

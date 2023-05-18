@@ -119,7 +119,7 @@ internal class CommandWorker
 				throw new ArgumentException($"The first argument of the command '{commandAttribute.Name}' has to be an InteractionContext or HybridCommandContext!");
 			var options = await ApplicationCommandsExtension.ParseParametersAsync(parameters.Skip(1), commandAttribute.Name, guildId);
 
-			commandMethods.Add(new CommandMethod { Method = method, Name = commandAttribute.Name });
+			commandMethods.Add(new CommandMethod { Method = method, Name = commandAttribute.Name, UseHybrid = ReferenceEquals(parameters.FirstOrDefault()?.ParameterType, typeof(HybridCommandContext)) });
 
 			DiscordApplicationCommandLocalization nameLocalizations = null;
 			DiscordApplicationCommandLocalization descriptionLocalizations = null;
