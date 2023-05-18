@@ -1,4 +1,4 @@
-// This file is part of the DisCatSharp project.
+// This file is part of the DisCatSharp project, based off DSharpPlus.
 //
 // Copyright (c) 2021-2023 AITSYS
 //
@@ -21,30 +21,13 @@
 // SOFTWARE.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
-using DisCatSharp.ApplicationCommands.Context;
-using DisCatSharp.HybridCommands.Entities;
-
-namespace DisCatSharp.ApplicationCommands.Attributes;
-
-/// <summary>
-/// Defines that this application command is only usable within a guild.
-/// </summary>
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = false)]
-public sealed class ApplicationCommandRequireGuildAttribute : ApplicationCommandCheckBaseAttribute
+namespace DisCatSharp.HybridCommands;
+public class HybridCommandsConfiguration
 {
-	/// <summary>
-	/// Defines that this command is only usable within a guild.
-	/// </summary>
-	public ApplicationCommandRequireGuildAttribute()
-	{ }
-
-	/// <summary>
-	/// Runs checks.
-	/// </summary>
-	public override Task<bool> ExecuteChecksAsync(BaseContext ctx)
-		=> Task.FromResult(ctx.Guild != null);
-	public override Task<bool> ExecuteChecksAsync(HybridCommandContext ctx)
-		=> Task.FromResult(ctx.Guild != null);
+	public bool CaseSensitive { internal get; set; } = true;
 }

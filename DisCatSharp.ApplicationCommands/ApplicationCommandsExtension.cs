@@ -41,6 +41,7 @@ using DisCatSharp.Entities;
 using DisCatSharp.Enums;
 using DisCatSharp.EventArgs;
 using DisCatSharp.Exceptions;
+using DisCatSharp.HybridCommands.Entities;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -948,8 +949,7 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 		{
 			if (e.Interaction.Type == InteractionType.ApplicationCommand)
 			{
-				//Creates the context
-				var context = new InteractionContext
+				var interactionContext = new InteractionContext
 				{
 					Interaction = e.Interaction,
 					Channel = e.Interaction.Channel,
@@ -966,6 +966,28 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 					ResolvedChannelMentions = e.Interaction.Data.Resolved?.Channels?.Values.ToList(),
 					ResolvedAttachments = e.Interaction.Data.Resolved?.Attachments?.Values.ToList(),
 					Type = ApplicationCommandType.ChatInput,
+					Locale = e.Interaction.Locale,
+					GuildLocale = e.Interaction.GuildLocale,
+					AppPermissions = e.Interaction.AppPermissions,
+					Entitlements = e.Interaction.Entitlements
+				};
+
+				var hybridContext = new HybridCommandContext
+				{
+					Interaction = e.Interaction,
+					Channel = e.Interaction.Channel,
+					Guild = e.Interaction.Guild,
+					User = e.Interaction.User,
+					Client = client,
+					CommandName = e.Interaction.Data.Name,
+					InteractionId = e.Interaction.Id,
+					Token = e.Interaction.Token,
+					Services = Configuration?.ServiceProvider,
+					ResolvedUserMentions = e.Interaction.Data.Resolved?.Users?.Values.ToList(),
+					ResolvedRoleMentions = e.Interaction.Data.Resolved?.Roles?.Values.ToList(),
+					ResolvedChannelMentions = e.Interaction.Data.Resolved?.Channels?.Values.ToList(),
+					ResolvedAttachments = e.Interaction.Data.Resolved?.Attachments?.Values.ToList(),
+					ApplicationCommandType = ApplicationCommandType.ChatInput,
 					Locale = e.Interaction.Locale,
 					GuildLocale = e.Interaction.GuildLocale,
 					AppPermissions = e.Interaction.AppPermissions,
@@ -991,23 +1013,46 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 
 					if (methods.Any())
 					{
-						var method = methods.First().Method;
-						if (DebugEnabled)
-							this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
-						var args = await this.ResolveInteractionCommandParameters(e, context, method, e.Interaction.Data.Options);
+						if (methods.First().UseHybrid)
+						{
+							var method = methods.First().Method;
+							if (DebugEnabled)
+								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
+							var args = await this.ResolveInteractionCommandParameters(e, hybridContext, method, e.Interaction.Data.Options);
 
-						await this.RunCommandAsync(context, method, args);
+							await this.RunCommandAsync(interactionContext, method, args);
+						}
+						else
+						{
+							var method = methods.First().Method;
+							if (DebugEnabled)
+								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
+							var args = await this.ResolveInteractionCommandParameters(e, interactionContext, method, e.Interaction.Data.Options);
+
+							await this.RunCommandAsync(interactionContext, method, args);
+						}
 					}
 					else if (groups.Any())
 					{
 						var command = e.Interaction.Data.Options[0];
 						var method = groups.First().Methods.First(x => x.Key == command.Name).Value;
 
-						if (DebugEnabled)
-							this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
-						var args = await this.ResolveInteractionCommandParameters(e, context, method, e.Interaction.Data.Options[0].Options);
+						if (groups.Any(x => x.UseHybrid))
+						{
+							if (DebugEnabled)
+								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
+							var args = await this.ResolveInteractionCommandParameters(e, hybridContext, method, e.Interaction.Data.Options[0].Options);
 
-						await this.RunCommandAsync(context, method, args);
+							await this.RunCommandAsync(hybridContext, method, args);
+						}
+						else
+						{
+							if (DebugEnabled)
+								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
+							var args = await this.ResolveInteractionCommandParameters(e, interactionContext, method, e.Interaction.Data.Options[0].Options);
+
+							await this.RunCommandAsync(interactionContext, method, args);
+						}
 					}
 					else if (subgroups.Any())
 					{
@@ -1016,18 +1061,29 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 
 						var method = group.Methods.First(x => x.Key == command.Options[0].Name).Value;
 
-						if (DebugEnabled)
-							this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
-						var args = await this.ResolveInteractionCommandParameters(e, context, method, e.Interaction.Data.Options[0].Options[0].Options);
+						if (group.UseHybrid)
+						{
+							if (DebugEnabled)
+								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
+							var args = await this.ResolveInteractionCommandParameters(e, hybridContext, method, e.Interaction.Data.Options[0].Options[0].Options);
 
-						await this.RunCommandAsync(context, method, args);
+							await this.RunCommandAsync(interactionContext, method, args);
+						}
+						else
+						{
+							if (DebugEnabled)
+								this.Client.Logger.LogDebug("Executing {cmd}", method.Name);
+							var args = await this.ResolveInteractionCommandParameters(e, interactionContext, method, e.Interaction.Data.Options[0].Options[0].Options);
+
+							await this.RunCommandAsync(interactionContext, method, args);
+						}
 					}
 
-					await this._slashExecuted.InvokeAsync(this, new SlashCommandExecutedEventArgs(this.Client.ServiceProvider) { Context = context });
+					await this._slashExecuted.InvokeAsync(this, new SlashCommandExecutedEventArgs(this.Client.ServiceProvider) { Context = interactionContext });
 				}
 				catch (Exception ex)
 				{
-					await this._slashError.InvokeAsync(this, new SlashCommandErrorEventArgs(this.Client.ServiceProvider) { Context = context, Exception = ex });
+					await this._slashError.InvokeAsync(this, new SlashCommandErrorEventArgs(this.Client.ServiceProvider) { Context = interactionContext, Exception = ex });
 				}
 			}
 			else if (e.Interaction.Type == InteractionType.AutoComplete)
@@ -1294,6 +1350,50 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 		}
 	}
 
+	internal async Task RunCommandAsync(HybridCommandContext context, MethodInfo method, IEnumerable<object> args)
+	{
+		object classInstance;
+
+		this.Client.Logger.Log(ApplicationCommandsLogLevel, "Executing {cmd}", method.Name);
+		//Accounts for lifespans
+		var moduleLifespan = (method.DeclaringType.GetCustomAttribute<ApplicationCommandModuleLifespanAttribute>() != null ? method.DeclaringType.GetCustomAttribute<ApplicationCommandModuleLifespanAttribute>()?.Lifespan : ApplicationCommandModuleLifespan.Transient) ?? ApplicationCommandModuleLifespan.Transient;
+		switch (moduleLifespan)
+		{
+			case ApplicationCommandModuleLifespan.Scoped:
+				//Accounts for static methods and adds DI
+				classInstance = method.IsStatic ? ActivatorUtilities.CreateInstance(Configuration?.ServiceProvider.CreateScope().ServiceProvider, method.DeclaringType) : CreateInstance(method.DeclaringType, Configuration?.ServiceProvider.CreateScope().ServiceProvider);
+				break;
+
+			case ApplicationCommandModuleLifespan.Transient:
+				//Accounts for static methods and adds DI
+				classInstance = method.IsStatic ? ActivatorUtilities.CreateInstance(Configuration?.ServiceProvider, method.DeclaringType) : CreateInstance(method.DeclaringType, Configuration?.ServiceProvider);
+				break;
+
+			//If singleton, gets it from the singleton list
+			case ApplicationCommandModuleLifespan.Singleton:
+				classInstance = s_singletonModules.First(x => ReferenceEquals(x.GetType(), method.DeclaringType));
+				break;
+
+			default:
+				throw new Exception($"An unknown {nameof(ApplicationCommandModuleLifespanAttribute)} scope was specified on command {context.CommandName}");
+		}
+
+		ApplicationCommandsModule module = null;
+		if (classInstance is ApplicationCommandsModule mod)
+			module = mod;
+
+		await this.RunPreexecutionChecksAsync(method, context);
+
+		var shouldExecute = await (module?.BeforeSlashExecutionAsync(context) ?? Task.FromResult(true));
+
+		if (shouldExecute)
+		{
+			await (Task)method.Invoke(classInstance, args.ToArray());
+
+			await (module?.AfterSlashExecutionAsync(context) ?? Task.CompletedTask);
+		}
+	}
+
 	/// <summary>
 	/// Property injection
 	/// </summary>
@@ -1453,6 +1553,139 @@ public sealed class ApplicationCommandsExtension : BaseExtension
 		}
 
 		return args;
+	}
+
+	/// <summary>
+	/// Resolves the slash command parameters.
+	/// </summary>
+	/// <param name="e">The event arguments.</param>
+	/// <param name="context">The interaction context.</param>
+	/// <param name="method">The method info.</param>
+	/// <param name="options">The options.</param>
+	private async Task<List<object>> ResolveInteractionCommandParameters(InteractionCreateEventArgs e, HybridCommandContext context, MethodInfo method, IEnumerable<DiscordInteractionDataOption> options)
+	{
+		var args = new List<object> { context };
+		var parameters = method.GetParameters().Skip(1);
+
+		foreach (var parameter in parameters)
+		{
+			//Accounts for optional arguments without values given
+			if (parameter.IsOptional && (options == null || (!options?.Any(x => x.Name == parameter.GetCustomAttribute<OptionAttribute>().Name.ToLower()) ?? true)))
+				args.Add(parameter.DefaultValue);
+			else
+			{
+				var option = options.Single(x => x.Name == parameter.GetCustomAttribute<OptionAttribute>().Name.ToLower());
+
+				if (parameter.ParameterType == typeof(string))
+					args.Add(option.Value.ToString());
+				else if (parameter.ParameterType.IsEnum)
+					args.Add(Enum.Parse(parameter.ParameterType, (string)option.Value));
+				else if (parameter.ParameterType == typeof(ulong) || parameter.ParameterType == typeof(ulong?))
+					args.Add((ulong?)option.Value);
+				else if (parameter.ParameterType == typeof(int) || parameter.ParameterType == typeof(int?))
+					args.Add((int?)option.Value);
+				else if (parameter.ParameterType == typeof(long) || parameter.ParameterType == typeof(long?))
+					if (option.Value == null)
+						args.Add(null);
+					else
+						args.Add(Convert.ToInt64(option.Value));
+				else if (parameter.ParameterType == typeof(bool) || parameter.ParameterType == typeof(bool?))
+					args.Add((bool?)option.Value);
+				else if (parameter.ParameterType == typeof(double) || parameter.ParameterType == typeof(double?))
+					args.Add((double?)option.Value);
+				else if (parameter.ParameterType == typeof(int) || parameter.ParameterType == typeof(int?))
+					args.Add((int?)option.Value);
+				else if (parameter.ParameterType == typeof(DiscordAttachment))
+				{
+					//Checks through resolved
+					if (e.Interaction.Data.Resolved.Attachments != null &&
+						e.Interaction.Data.Resolved.Attachments.TryGetValue((ulong)option.Value, out var attachment))
+						args.Add(attachment);
+					else
+						args.Add(new DiscordAttachment() { Id = (ulong)option.Value, Discord = this.Client.ApiClient.Discord });
+				}
+				else if (parameter.ParameterType == typeof(DiscordUser))
+				{
+					//Checks through resolved
+					if (e.Interaction.Data.Resolved.Members != null &&
+						e.Interaction.Data.Resolved.Members.TryGetValue((ulong)option.Value, out var member))
+						args.Add(member);
+					else if (e.Interaction.Data.Resolved.Users != null &&
+							 e.Interaction.Data.Resolved.Users.TryGetValue((ulong)option.Value, out var user))
+						args.Add(user);
+					else
+						args.Add(await this.Client.GetUserAsync((ulong)option.Value));
+				}
+				else if (parameter.ParameterType == typeof(DiscordChannel))
+				{
+					//Checks through resolved
+					if (e.Interaction.Data.Resolved.Channels != null &&
+						e.Interaction.Data.Resolved.Channels.TryGetValue((ulong)option.Value, out var channel))
+						args.Add(channel);
+					else
+						args.Add(e.Interaction.Guild.GetChannel((ulong)option.Value));
+				}
+				else if (parameter.ParameterType == typeof(DiscordRole))
+				{
+					//Checks through resolved
+					if (e.Interaction.Data.Resolved.Roles != null &&
+						e.Interaction.Data.Resolved.Roles.TryGetValue((ulong)option.Value, out var role))
+						args.Add(role);
+					else
+						args.Add(e.Interaction.Guild.GetRole((ulong)option.Value));
+				}
+				else if (parameter.ParameterType == typeof(SnowflakeObject))
+				{
+					//Checks through resolved
+					if (e.Interaction.Data.Resolved.Channels != null && e.Interaction.Data.Resolved.Channels.TryGetValue((ulong)option.Value, out var channel))
+						args.Add(channel);
+					if (e.Interaction.Data.Resolved.Roles != null && e.Interaction.Data.Resolved.Roles.TryGetValue((ulong)option.Value, out var role))
+						args.Add(role);
+					else if (e.Interaction.Data.Resolved.Members != null && e.Interaction.Data.Resolved.Members.TryGetValue((ulong)option.Value, out var member))
+						args.Add(member);
+					else if (e.Interaction.Data.Resolved.Users != null && e.Interaction.Data.Resolved.Users.TryGetValue((ulong)option.Value, out var user))
+						args.Add(user);
+					else
+						throw new ArgumentException("Error resolving mentionable option.");
+				}
+				else
+					throw new ArgumentException($"Error resolving interaction.");
+			}
+		}
+
+		return args;
+	}
+
+	/// <summary>
+	/// Runs the pre-execution checks.
+	/// </summary>
+	/// <param name="method">The method info.</param>
+	/// <param name="context">The base context.</param>
+	private async Task RunPreexecutionChecksAsync(MethodInfo method, HybridCommandContext context)
+	{
+		var attributes = new List<ApplicationCommandCheckBaseAttribute>();
+		attributes.AddRange(method.GetCustomAttributes<ApplicationCommandCheckBaseAttribute>(true));
+		attributes.AddRange(method.DeclaringType.GetCustomAttributes<ApplicationCommandCheckBaseAttribute>());
+		if (method.DeclaringType.DeclaringType != null)
+		{
+			attributes.AddRange(method.DeclaringType.DeclaringType.GetCustomAttributes<ApplicationCommandCheckBaseAttribute>());
+			if (method.DeclaringType.DeclaringType.DeclaringType != null)
+			{
+				attributes.AddRange(method.DeclaringType.DeclaringType.DeclaringType.GetCustomAttributes<ApplicationCommandCheckBaseAttribute>());
+			}
+		}
+
+		var dict = new Dictionary<ApplicationCommandCheckBaseAttribute, bool>();
+		foreach (var att in attributes)
+		{
+			//Runs the check and adds the result to a list
+			var result = await att.ExecuteChecksAsync(context);
+			dict.Add(att, result);
+		}
+
+		//Checks if any failed, and throws an exception
+		if (dict.Any(x => x.Value == false))
+			throw new SlashExecutionChecksFailedException { FailedChecks = dict.Where(x => x.Value == false).Select(x => x.Key).ToList() };
 	}
 
 	/// <summary>
@@ -1810,6 +2043,11 @@ internal class CommandMethod
 	/// Gets or sets the method.
 	/// </summary>
 	public MethodInfo Method { get; set; }
+
+	/// <summary>
+	/// Whether the method is a hybrid command.
+	/// </summary>
+	public bool UseHybrid { get; set; } = false;
 }
 
 /// <summary>
@@ -1831,6 +2069,11 @@ internal class GroupCommand
 	/// Gets or sets the methods.
 	/// </summary>
 	public List<KeyValuePair<string, MethodInfo>> Methods { get; set; } = null;
+
+	/// <summary>
+	/// Whether the method is a hybrid command.
+	/// </summary>
+	public bool UseHybrid { get; set; } = false;
 }
 
 /// <summary>
@@ -1852,6 +2095,11 @@ internal class SubGroupCommand
 	/// Gets or sets the sub commands.
 	/// </summary>
 	public List<GroupCommand> SubCommands { get; set; } = new();
+
+	/// <summary>
+	/// Whether the method is a hybrid command.
+	/// </summary>
+	public bool UseHybrid { get; set; } = false;
 }
 
 /// <summary>

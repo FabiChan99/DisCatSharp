@@ -27,6 +27,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
+using DisCatSharp.HybridCommands.Entities;
 
 using Microsoft.Extensions.Logging;
 
@@ -118,10 +119,10 @@ public static class ApplicationCommandsUtilities
 
 		// check if appropriate return and arguments
 		parameters = method.GetParameters();
-		if (!parameters.Any() || (parameters.First().ParameterType != typeof(ContextMenuContext) && parameters.First().ParameterType != typeof(InteractionContext)) || method.ReturnType != typeof(Task))
+		if (!parameters.Any() || (parameters.First().ParameterType != typeof(ContextMenuContext) && parameters.First().ParameterType != typeof(InteractionContext) && parameters.First().ParameterType != typeof(HybridCommandContext)) || method.ReturnType != typeof(Task))
 		{
 			if (ApplicationCommandsExtension.DebugEnabled)
-				ApplicationCommandsExtension.Logger.LogDebug("Missing first parameter with type ContextMenuContext or InteractionContext");
+				ApplicationCommandsExtension.Logger.LogDebug("Missing first parameter with type ContextMenuContext, InteractionContext or HybridCommandContext");
 			return false;
 		}
 

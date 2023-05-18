@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
 using DisCatSharp.Enums;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Attributes;
 
@@ -60,4 +61,7 @@ public sealed class ApplicationCommandRequireEntitlementAttribute : ApplicationC
 		}
 		return await Task.FromResult(true);
 	}
+
+	public override Task<bool> ExecuteChecksAsync(HybridCommandContext ctx)
+		=> throw new NotImplementedException();
 }

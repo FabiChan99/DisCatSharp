@@ -23,6 +23,7 @@
 using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands;
 
@@ -39,12 +40,18 @@ public abstract class ApplicationCommandsModule
 	public virtual Task<bool> BeforeSlashExecutionAsync(InteractionContext ctx)
 		=> Task.FromResult(true);
 
+	public virtual Task<bool> BeforeSlashExecutionAsync(HybridCommandContext ctx)
+		=> Task.FromResult(true);
+
 	/// <summary>
 	/// Called after the execution of a slash command in the module.
 	/// </summary>
 	/// <param name="ctx">The context.</param>
 	/// <returns></returns>
 	public virtual Task AfterSlashExecutionAsync(InteractionContext ctx)
+		=> Task.CompletedTask;
+
+	public virtual Task AfterSlashExecutionAsync(HybridCommandContext ctx)
 		=> Task.CompletedTask;
 
 	/// <summary>

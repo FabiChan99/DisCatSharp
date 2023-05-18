@@ -24,6 +24,7 @@ using System;
 using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Attributes;
 
@@ -38,4 +39,5 @@ public abstract class ApplicationCommandCheckBaseAttribute : Attribute
 	/// <param name="ctx">The context.</param>
 	/// <returns>Whether the checks passed.</returns>
 	public abstract Task<bool> ExecuteChecksAsync(BaseContext ctx);
+	public abstract Task<bool> ExecuteChecksAsync(HybridCommandContext ctx);
 }

@@ -22,6 +22,7 @@
 
 using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("DisCatSharp")]
 [assembly: InternalsVisibleTo("DisCatSharp.ApplicationCommands")]
 [assembly: InternalsVisibleTo("DisCatSharp.CommandsNext")]
 [assembly: InternalsVisibleTo("DisCatSharp.Common")]
@@ -46,4 +47,3 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("DisCatSharp.Experimental")]
 [assembly: InternalsVisibleTo("ProjectMakoto")]
 [assembly: InternalsVisibleTo("DisCatSharp.Extensions.TwoFactorCommands")]
-[assembly: InternalsVisibleTo("DisCatSharp.HybridCommands")]

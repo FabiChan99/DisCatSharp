@@ -47,4 +47,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Microsoft.DocAsCode.Metadata.ManagedReference")]
 [assembly: InternalsVisibleTo("ProjectMakoto")]
 [assembly: InternalsVisibleTo("DisCatSharp.Extensions.TwoFactorCommands")]
+[assembly: InternalsVisibleTo("DisCatSharp.HybridCommands")]
 

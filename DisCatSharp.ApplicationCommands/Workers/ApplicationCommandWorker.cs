@@ -32,6 +32,7 @@ using DisCatSharp.ApplicationCommands.Entities;
 using DisCatSharp.ApplicationCommands.Enums;
 using DisCatSharp.Entities;
 using DisCatSharp.Enums;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Workers;
 
@@ -114,8 +115,8 @@ internal class CommandWorker
 			var commandAttribute = method.GetCustomAttribute<SlashCommandAttribute>();
 
 			var parameters = method.GetParameters();
-			if (parameters.Length == 0 || parameters == null || !ReferenceEquals(parameters.FirstOrDefault()?.ParameterType, typeof(InteractionContext)))
-				throw new ArgumentException($"The first argument of the command '{commandAttribute.Name}' has to be an InteractionContext!");
+			if (parameters.Length == 0 || parameters == null || (!ReferenceEquals(parameters.FirstOrDefault()?.ParameterType, typeof(InteractionContext)) && !ReferenceEquals(parameters.FirstOrDefault()?.ParameterType, typeof(HybridCommandContext))))
+				throw new ArgumentException($"The first argument of the command '{commandAttribute.Name}' has to be an InteractionContext or HybridCommandContext!");
 			var options = await ApplicationCommandsExtension.ParseParametersAsync(parameters.Skip(1), commandAttribute.Name, guildId);
 
 			commandMethods.Add(new CommandMethod { Method = method, Name = commandAttribute.Name });
@@ -221,8 +222,8 @@ internal class NestedCommandWorker
 
 				//Gets the parameters and accounts for InteractionContext
 				var parameters = submethod.GetParameters();
-				if (parameters.Length == 0 || parameters == null || !ReferenceEquals(parameters.First().ParameterType, typeof(InteractionContext)))
-					throw new ArgumentException($"The first argument of the command '{commandAttribute.Name}' has to be an InteractionContext!");
+				if (parameters.Length == 0 || parameters == null || (!ReferenceEquals(parameters.First().ParameterType, typeof(InteractionContext)) && !ReferenceEquals(parameters.First().ParameterType, typeof(HybridCommandContext))))
+					throw new ArgumentException($"The first argument of the command '{commandAttribute.Name}' has to be an InteractionContext or HybridCommandContext!");
 
 				var options = await ApplicationCommandsExtension.ParseParametersAsync(parameters.Skip(1), commandAttribute.Name, guildId);
 
@@ -306,8 +307,8 @@ internal class NestedCommandWorker
 					var suboptions = new List<DiscordApplicationCommandOption>();
 					var commatt = subsubmethod.GetCustomAttribute<SlashCommandAttribute>();
 					var parameters = subsubmethod.GetParameters();
-					if (parameters.Length == 0 || parameters == null || !ReferenceEquals(parameters.First().ParameterType, typeof(InteractionContext)))
-						throw new ArgumentException($"The first argument of the command '{subgroupAttribute.Name}' has to be an InteractionContext!");
+					if (parameters.Length == 0 || parameters == null || (!ReferenceEquals(parameters.First().ParameterType, typeof(InteractionContext)) && !ReferenceEquals(parameters.First().ParameterType, typeof(HybridCommandContext))))
+						throw new ArgumentException($"The first argument of the command '{subgroupAttribute.Name}' has to be an InteractionContext or HybridCommandContext!");
 
 					suboptions = suboptions.Concat(await ApplicationCommandsExtension.ParseParametersAsync(parameters.Skip(1), subgroupAttribute.Name, guildId)).ToList();
 

@@ -90,6 +90,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisCatSharp.EventHandlers.T
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{267EFBFF-ECD2-4686-A5DE-5B642F8A7CCB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisCatSharp.HybridCommands", "DisCatSharp.HybridCommands\DisCatSharp.HybridCommands.csproj", "{A7E22917-5064-4A99-8639-F4439415D63E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -156,6 +158,10 @@ Global
 		{BE646FCD-8A56-46DC-978D-AC1E0A892A9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BE646FCD-8A56-46DC-978D-AC1E0A892A9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE646FCD-8A56-46DC-978D-AC1E0A892A9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7E22917-5064-4A99-8639-F4439415D63E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7E22917-5064-4A99-8639-F4439415D63E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7E22917-5064-4A99-8639-F4439415D63E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7E22917-5064-4A99-8639-F4439415D63E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

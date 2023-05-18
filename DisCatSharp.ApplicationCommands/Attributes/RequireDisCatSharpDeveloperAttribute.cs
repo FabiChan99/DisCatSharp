@@ -24,6 +24,7 @@ using System;
 using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Attributes;
 
@@ -43,5 +44,7 @@ public sealed class ApplicationCommandRequireDisCatSharpDeveloperAttribute : App
 	/// Runs checks.
 	/// </summary>
 	public override Task<bool> ExecuteChecksAsync(BaseContext ctx)
+		=> Task.FromResult(true);
+	public override Task<bool> ExecuteChecksAsync(HybridCommandContext ctx)
 		=> Task.FromResult(true);
 }

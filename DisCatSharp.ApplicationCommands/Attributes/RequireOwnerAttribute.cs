@@ -25,6 +25,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Attributes;
 
@@ -44,6 +45,14 @@ public sealed class ApplicationCommandRequireOwnerAttribute : ApplicationCommand
 	/// Runs checks.
 	/// </summary>
 	public override Task<bool> ExecuteChecksAsync(BaseContext ctx)
+	{
+		var app = ctx.Client.CurrentApplication;
+		var me = ctx.Client.CurrentUser;
+
+		return app != null ? Task.FromResult(app.Owners.Any(x => x.Id == ctx.User.Id)) : Task.FromResult(ctx.User.Id == me.Id);
+	}
+
+	public override Task<bool> ExecuteChecksAsync(HybridCommandContext ctx)
 	{
 		var app = ctx.Client.CurrentApplication;
 		var me = ctx.Client.CurrentUser;

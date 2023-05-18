@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
 using DisCatSharp.Enums;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Attributes;
 
@@ -59,6 +60,33 @@ public sealed class ApplicationCommandRequirePermissionsAttribute : ApplicationC
 	/// Runs checks.
 	/// </summary>
 	public override async Task<bool> ExecuteChecksAsync(BaseContext ctx)
+	{
+		if (ctx.Guild == null)
+			return this.IgnoreDms;
+
+		var usr = ctx.Member;
+		if (usr == null)
+			return false;
+		var pusr = ctx.Channel.PermissionsFor(usr);
+
+		var bot = await ctx.Guild.GetMemberAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
+		if (bot == null)
+			return false;
+		var pbot = ctx.Channel.PermissionsFor(bot);
+
+		var usrok = ctx.Guild.OwnerId == usr.Id;
+		var botok = ctx.Guild.OwnerId == bot.Id;
+
+		if (!usrok)
+			usrok = (pusr & Permissions.Administrator) != 0 || (pusr & this.Permissions) == this.Permissions;
+
+		if (!botok)
+			botok = (pbot & Permissions.Administrator) != 0 || (pbot & this.Permissions) == this.Permissions;
+
+		return usrok && botok;
+	}
+
+	public override async Task<bool> ExecuteChecksAsync(HybridCommandContext ctx)
 	{
 		if (ctx.Guild == null)
 			return this.IgnoreDms;

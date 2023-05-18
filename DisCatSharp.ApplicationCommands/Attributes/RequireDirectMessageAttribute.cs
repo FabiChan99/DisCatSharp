@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 
 using DisCatSharp.ApplicationCommands.Context;
 using DisCatSharp.Entities;
+using DisCatSharp.HybridCommands.Entities;
 
 namespace DisCatSharp.ApplicationCommands.Attributes;
 
@@ -44,5 +45,7 @@ public sealed class ApplicationCommandRequireDirectMessageAttribute : Applicatio
 	/// Runs checks.
 	/// </summary>
 	public override Task<bool> ExecuteChecksAsync(BaseContext ctx)
+		=> Task.FromResult(ctx.Channel is DiscordDmChannel);
+	public override Task<bool> ExecuteChecksAsync(HybridCommandContext ctx)
 		=> Task.FromResult(ctx.Channel is DiscordDmChannel);
 }
